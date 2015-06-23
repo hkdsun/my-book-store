@@ -2,11 +2,10 @@ package com.hkdsun.bookstore.service
 
 import akka.actor.Actor
 import com.hkdsun.bookstore.domain._
-import spray.httpx.Json4sSupport
-import spray.routing.HttpService
-import spray.json._
-import spray.httpx.SprayJsonSupport._
 import com.hkdsun.bookstore.domain.BookProtocol._
+import spray.httpx.SprayJsonSupport._
+import spray.json._
+import spray.routing.HttpService
 
 class RestServiceActor extends Actor with BookRouter with SearchRouter {
 
@@ -17,15 +16,15 @@ class RestServiceActor extends Actor with BookRouter with SearchRouter {
 
 trait BookRouter extends HttpService {
   val bookRoute = 
-    path("list" / Segment) { bookId =>
+    path("book" / Segment) { bookId =>
       get {
         complete {
-          val author = Author(id = Some(5678), firstName = "Hormoz", lastName = "K")
-          val book = Book(id = Some(1234), title = s"BookId $bookId", author = author, isbn = "123456")
+          val author = Author(firstName = "Hormoz", lastName = "K")
+          val book = Book(title = s"BookId $bookId", author = author, isbn = "123456")
           book
         }
       }
-    }
+    } 
 }
 
 trait SearchRouter extends HttpService {

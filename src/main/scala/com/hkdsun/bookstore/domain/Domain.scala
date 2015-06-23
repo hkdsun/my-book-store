@@ -7,6 +7,13 @@ object BookProtocol extends DefaultJsonProtocol {
   implicit val bookFormat: RootJsonFormat[Book] = jsonFormat4(Book)
 }
 
-case class Book(val id: Option[Long], val title: String, val author: Author, val isbn: String)
-case class Author(val id: Option[Long], val firstName: String, val lastName: String)
+case class Book(
+  val id: Option[Long] = None, 
+  val title: String, 
+  val author: Author, 
+  val isbn: String)
+case class Author(
+  val id: Option[Long] = None, 
+  val firstName: String, 
+  val lastName: String)
 
