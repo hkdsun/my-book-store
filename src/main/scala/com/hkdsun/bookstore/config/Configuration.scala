@@ -1,4 +1,4 @@
-package com.hkdsun.bookstore
+package com.hkdsun.bookstore.config
 
 import com.typesafe.config.ConfigFactory
 import util.Try
