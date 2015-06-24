@@ -6,6 +6,7 @@ import spray.can.Http
 import com.hkdsun.bookstore.config.Configuration
 import com.hkdsun.bookstore.service._
 
+
 object Boot extends App with Configuration {
 
   implicit val system = ActorSystem("rest-book-store-system")

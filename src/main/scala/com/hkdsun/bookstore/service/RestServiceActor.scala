@@ -20,11 +20,20 @@ trait BookRouter extends HttpService {
       get {
         complete {
           val author = Author(firstName = "Hormoz", lastName = "K")
-          val book = Book(title = s"BookId $bookId", author = author, isbn = "123456")
+          val book = Book(title = s"$bookId", author = author, isbn = "123456")
           book
         }
+      } ~
+      post {
+          entity(as[String]) { source =>
+              complete {
+                  val json = source.parseJson
+                  val book = json.convertTo[Book]
+                  book
+              }
+          }
       }
-    } 
+    }
 }
 
 trait SearchRouter extends HttpService {
