@@ -8,7 +8,7 @@ object BookProtocol extends DefaultJsonProtocol {
 }
 
 case class Book(
-  val id: Option[Long] = None, 
+  val id: Option[String] = None, 
   val title: String, 
   val author: Author, 
   val isbn: String)

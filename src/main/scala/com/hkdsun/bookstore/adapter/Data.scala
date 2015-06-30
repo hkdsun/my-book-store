@@ -1,9 +1,9 @@
 package com.hkdsun.bookstore.adapter
 
 import com.hkdsun.bookstore.domain._
-import com.mongodb.casbah.commons.MongoDBObject
+import com.mongodb.casbah.Imports._
 
-class BookDal {
+object BookDal {
 
   val conn = MongoFactory.getConnection
 
@@ -14,7 +14,7 @@ class BookDal {
     id
   }
 
-  def findBook(id: String) = {
+  def findBook(id: String): Option[Book] = {
     var q = MongoDBObject("_id" -> new org.bson.types.ObjectId(id))
     val collection = MongoFactory.getCollection(conn)
     val result = collection findOne q
@@ -22,12 +22,14 @@ class BookDal {
     val bookResult = result.get
 
     val book = Book(
-      id = Some(bookResult.as[org.bson.types.ObjectId]("_id").toString()),
+      id = Some(bookResult.as[org.bson.types.ObjectId]("_id").toString),
       title = bookResult.as[String]("title"),
       author = bookResult.as[Author]("author"),
-      isbn = bookResult.as[String])
+      isbn = bookResult.as[String]("isbn")
+    )
 
-    book 
+    //TODO Make this return an option and refactor accordingly
+    Some(book)
   }
 
   private def buildMongoDbObject(book: Book): MongoDBObject = {

@@ -3,6 +3,7 @@ package com.hkdsun.bookstore.service
 import akka.actor.Actor
 import com.hkdsun.bookstore.domain._
 import com.hkdsun.bookstore.domain.BookProtocol._
+import com.hkdsun.bookstore.adapter._
 import spray.httpx.SprayJsonSupport._
 import spray.json._
 import spray.routing.HttpService
@@ -19,17 +20,24 @@ trait BookRouter extends HttpService {
     path("book" / Segment) { bookId =>
       get {
         complete {
-          val author = Author(firstName = "Hormoz", lastName = "K")
-          val book = Book(title = s"$bookId", author = author, isbn = "123456")
-          book
+          import BookDal._
+          findBook(bookId)
+        }
+      } 
+    } ~
+    path("book") {
+      get {
+        complete {
+          "shows everything"
         }
       } ~
       post {
           entity(as[String]) { source =>
               complete {
+                  import BookDal._
                   val json = source.parseJson
                   val book = json.convertTo[Book]
-                  book
+                  saveBook(book).toString
               }
           }
       }
