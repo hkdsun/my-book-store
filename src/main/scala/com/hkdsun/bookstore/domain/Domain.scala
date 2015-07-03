@@ -13,7 +13,6 @@ case class Book(
   val author: Author, 
   val isbn: String)
 case class Author(
-  val id: Option[Long] = None, 
+  val id: Option[String] = None, 
   val firstName: String, 
   val lastName: String)
-

@@ -8,11 +8,14 @@ import spray.httpx.SprayJsonSupport._
 import spray.json._
 import spray.routing.HttpService
 
-class RestServiceActor extends Actor with BookRouter with SearchRouter {
+class RestServiceActor extends Actor 
+  with BookRouter 
+  with SearchRouter 
+  with AuthorRouter {
 
   implicit def actorRefFactory = context
 
-  def receive: Receive = runRoute(bookRoute ~ searchRoute)
+  def receive: Receive = runRoute(bookRoute ~ authorRoute ~ searchRoute)
 }
 
 trait BookRouter extends HttpService {
@@ -20,24 +23,49 @@ trait BookRouter extends HttpService {
     path("book" / Segment) { bookId =>
       get {
         complete {
-          import BookDal._
-          findBook(bookId)
+          BookDal.find(bookId)
         }
       } 
     } ~
     path("book") {
       get {
         complete {
-          "shows everything"
+          BookDal.all
         }
       } ~
       post {
           entity(as[String]) { source =>
               complete {
-                  import BookDal._
                   val json = source.parseJson
                   val book = json.convertTo[Book]
-                  saveBook(book).toString
+                  BookDal.save(book).toString
+              }
+          }
+      }
+    }
+}
+
+trait AuthorRouter extends HttpService {
+  val authorRoute =
+    path("author" / Segment) { authorId =>
+      get {
+        complete {
+          AuthorDal.find(authorId)
+        }
+      } 
+    } ~
+    path("author") {
+      get {
+        complete {
+          AuthorDal.all
+        }
+      } ~
+      post {
+          entity(as[String]) { source =>
+              complete {
+                  val json = source.parseJson
+                  val author = json.convertTo[Author]
+                  AuthorDal.save(author).toString
               }
           }
       }
