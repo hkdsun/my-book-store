@@ -17,37 +17,40 @@ object BookDal {
 
 
   def find(id: String): Option[Book] = {
-    var q = MongoDBObject("_id" -> new org.bson.types.ObjectId(id))
-    val result = collection findOne q
+    val q = MongoDBObject("_id" -> new org.bson.types.ObjectId(id))
+    val dbobj = collection findOne q
 
-    val bookResult = result.get
-
-    val author = bookResult.as[DBObject]("author")
-    val book = Book(
-      id = Some(bookResult.as[org.bson.types.ObjectId]("_id").toString),
-      title = bookResult.as[String]("title"),
-      author = AuthorDal.make(author),
-      isbn = bookResult.as[String]("isbn")
-    )
-
-    //TODO Make this return an option and refactor accordingly
-    Some(book)
+    dbobj match {
+      case Some(obj) =>
+        val author = obj.getAs[DBObject]("author")
+        println(s"AUTHOR:\n$author")
+        println(s"OBJ:\n$obj")
+        val book = Book(
+          id = Some(obj.as[org.bson.types.ObjectId]("_id").toString),
+          title = obj.as[String]("title"),
+          author = AuthorDal.make(author).get,
+          isbn = obj.as[String]("isbn"))
+        Some(book)
+      case None =>
+        None
+    }
   }
 
   def all: List[Book] = collection.find.toList.map{ obj => 
-    val author = obj.as[DBObject]("author")
+      println(s"OBJECT ISSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS\n $obj")
+    val author = obj.getAs[DBObject]("author")
     Book(
       id = Some(obj.as[org.bson.types.ObjectId]("_id").toString),
       title = obj.as[String]("title"),
-      author = AuthorDal.make(author),
+      author = AuthorDal.make(author).get,
       isbn = obj.as[String]("isbn")
     )
   }
 
-  private def buildMongoDbObject(book: Book): MongoDBObject = {
+  def buildMongoDbObject(book: Book): MongoDBObject = {
     val builder = MongoDBObject.newBuilder
     builder += "title" -> book.title
-    builder += "author" -> book.author
+    builder += "author" -> AuthorDal.buildMongoDbObject(book.author)
     builder += "isbn" -> Some(book.isbn).getOrElse("")
     builder.result
   }
@@ -57,11 +60,10 @@ object AuthorDal {
   lazy val conn = MongoFactory.getConnection
   lazy val collection = MongoFactory.getCollection(conn)
 
-  def make(obj: DBObject) = Author (
-      id = Some(obj.as[org.bson.types.ObjectId]("_id").toString),
-      firstName = obj.as[String]("firstName"),
-      lastName = obj.as[String]("lastName")
-    )
+  def make(obj: Option[DBObject]): Option[Author] = obj.map { auth =>
+    Author (firstName = auth.as[String]("firstName"),
+      lastName = auth.as[String]("lastName"))
+  }
 
   def save(author: Author) = {
     val obj = buildMongoDbObject(author)
@@ -95,7 +97,7 @@ object AuthorDal {
     )
   }
 
-  private def buildMongoDbObject(author: Author): MongoDBObject = {
+  def buildMongoDbObject(author: Author): MongoDBObject = {
     val builder = MongoDBObject.newBuilder
     builder += "firstName" -> author.firstName
     builder += "lastName" -> author.lastName

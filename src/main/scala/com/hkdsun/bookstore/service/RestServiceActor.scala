@@ -23,7 +23,12 @@ trait BookRouter extends HttpService {
     path("book" / Segment) { bookId =>
       get {
         complete {
-          BookDal.find(bookId)
+          BookDal.find(bookId) match {
+            case None => 
+              ErrorResponse(Some("Book search"),"Book not found")
+            case Some(book) =>
+              book
+          }
         }
       } 
     } ~
