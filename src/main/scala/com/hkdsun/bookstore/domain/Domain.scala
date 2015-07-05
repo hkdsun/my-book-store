@@ -1,6 +1,7 @@
 package com.hkdsun.bookstore.domain
 
 import spray.json._
+import org.bson.types.ObjectId
 
 object BookProtocol extends DefaultJsonProtocol {
   implicit val authorFormat: RootJsonFormat[Author] = jsonFormat3(Author)
@@ -20,5 +21,5 @@ case class Author(
   val lastName: String)
 
 case class ErrorResponse(
-  val logger: Option[String],
+  val error_source: Option[String],
   val reason: String)
