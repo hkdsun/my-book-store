@@ -13,6 +13,8 @@ object Boot extends App with Configuration {
 
   val restService = system.actorOf(Props[RestServiceActor], "rest-endpoint")
 
+  val discoveryService = system.actorOf(Props[DiscoveryServiceActor], "discovery-service")
+
   // start HTTP server with rest service actor as a handler
   IO(Http) ! Http.Bind(restService, serviceHost, servicePort)
 }

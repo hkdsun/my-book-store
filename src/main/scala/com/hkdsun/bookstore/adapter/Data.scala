@@ -6,13 +6,14 @@ import org.bson.types.ObjectId
 
 trait DataLayerBase {
   type T
+  val coll: String
 
   lazy val conn = MongoFactory.getConnection
-  lazy val collection = MongoFactory.getCollection(conn)
+  lazy val collection = MongoFactory.getCollection(coll)
 
   def save(t: T) = {
     val tObj = make(t)
-    val result = MongoFactory.getCollection(conn).save(tObj)
+    val result = MongoFactory.getCollection(coll).save(tObj)
     tObj.getAs[ObjectId]("_id").get
   }
 
@@ -36,6 +37,7 @@ trait DataLayerBase {
 
 object BookDal extends DataLayerBase {
   type T = Book
+  val coll = "books"
 
   def make(book: Book): MongoDBObject = {
     val builder = MongoDBObject.newBuilder
@@ -55,6 +57,7 @@ object BookDal extends DataLayerBase {
 
 object AuthorDal extends DataLayerBase {
   type T = Author
+  val coll = "books"
 
   def make(obj: Option[DBObject]): Option[Author] = obj.map { auth =>
     Author (id = auth.getAs[ObjectId]("_id").map(_.toString),
