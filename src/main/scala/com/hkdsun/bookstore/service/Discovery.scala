@@ -3,6 +3,7 @@ package com.hkdsun.bookstore.service
 import akka.actor.Actor
 import com.hkdsun.bookstore.config.Configuration
 import java.io.File
+import com.hkdsun.bookstore.utils.{ FileTools, EbookFile }
 
 case class StartDiscovery(path: String)
 
@@ -11,8 +12,10 @@ class DiscoveryServiceActor extends Actor with Configuration {
 
   def receive: Receive = {
     case StartDiscovery(path) => {
-      val file = new File(path)
-      val authors = file.listFiles.filter(_.isDirectory).map(_.getName).foreach(println(_))
+      val files = FileTools.getEbooks(path)
+      for(EbookFile(name,_,_) <- files){
+        println(s"file: $name")
+      }
     }
   }
 }
