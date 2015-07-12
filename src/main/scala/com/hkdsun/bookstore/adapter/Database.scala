@@ -10,4 +10,3 @@ object MongoFactory extends Configuration {
   def closeConnection(conn: MongoClient) = conn.close
 }
 
-

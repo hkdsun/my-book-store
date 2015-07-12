@@ -2,8 +2,8 @@ package com.hkdsun.bookstore.utils
 
 import java.nio.file._
 import java.nio.file.attribute.BasicFileAttributes
-import java.util.{ EnumSet => JEnumSet }
-import scala.collection.mutable.{ Set => MSet }
+import java.util.{ EnumSet ⇒ JEnumSet }
+import scala.collection.mutable.{ Set ⇒ MSet }
 import com.hkdsun.bookstore.config.Configuration
 
 object FileTools {
@@ -15,7 +15,7 @@ object FileTools {
   }
 }
 
-case class EbookFile (filename: String, ext: String, abspath: Path)
+case class EbookFile(filename: String, ext: String, abspath: Path)
 
 class EbookFileVisitor extends SimpleFileVisitor[Path] with Configuration {
   val files = MSet.empty[EbookFile]
@@ -23,10 +23,10 @@ class EbookFileVisitor extends SimpleFileVisitor[Path] with Configuration {
   override def visitFile(file: Path, attrs: BasicFileAttributes) = try {
     val name = file.getFileName.toString
     val ext = name.split('.').last
-    if(supportExts.contains(ext))
+    if (supportExts.contains(ext))
       files += EbookFile(name, name.split('.').last, file)
     FileVisitResult.CONTINUE
   } catch {
-    case _ : Throwable => FileVisitResult.TERMINATE
+    case _: Throwable ⇒ FileVisitResult.TERMINATE
   }
 }

@@ -10,14 +10,14 @@ object BookProtocol extends DefaultJsonProtocol {
 }
 
 case class Book(
-  val id: Option[String] = None, 
-  val title: String, 
-  val author: Author, 
+  val id: Option[String] = None,
+  val title: String,
+  val author: Author,
   val isbn: String)
 
 case class Author(
-  val id: Option[String] = None, 
-  val firstName: String, 
+  val id: Option[String] = None,
+  val firstName: String,
   val lastName: String)
 
 case class ErrorResponse(

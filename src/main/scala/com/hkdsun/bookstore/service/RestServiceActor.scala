@@ -9,9 +9,9 @@ import spray.json._
 import spray.routing.HttpService
 import org.bson.types.ObjectId
 
-class RestServiceActor extends Actor 
-  with BookRouter 
-  with SearchRouter {
+class RestServiceActor extends Actor
+    with BookRouter
+    with SearchRouter {
 
   implicit def actorRefFactory = context
 
@@ -19,53 +19,52 @@ class RestServiceActor extends Actor
 }
 
 trait BookRouter extends HttpService {
-  val bookRoute = 
-    path("book" / Segment) { bookId =>
+  val bookRoute =
+    path("book" / Segment) { bookId ⇒
       get {
         complete {
           try {
-              val oid = new ObjectId(bookId)
-              BookDal.find(oid) match {
-                case None => 
-                  ErrorResponse(Some("Book search"),"Book not found")
-                case Some(book) =>
-                  book
+            val oid = new ObjectId(bookId)
+            BookDal.find(oid) match {
+              case None ⇒
+                ErrorResponse(Some("Book search"), "Book not found")
+              case Some(book) ⇒
+                book
+            }
+          } catch {
+            case err: IllegalArgumentException ⇒ ErrorResponse(Some("Book search"), "Invalid ID")
+          }
+        }
+      }
+    } ~
+      path("book") {
+        get {
+          complete {
+            BookDal.all
+          }
+        } ~
+          post {
+            entity(as[String]) { source ⇒
+              complete {
+                val json = source.parseJson
+                val book = json.convertTo[Book]
+                BookDal.save(book).toString
+              }
             }
           }
-          catch {
-            case err: IllegalArgumentException => ErrorResponse(Some("Book search"),"Invalid ID")
-          }
-        }
-      } 
-    } ~
-    path("book") {
-      get {
-        complete {
-          BookDal.all
-        }
-      } ~
-      post {
-          entity(as[String]) { source =>
-              complete {
-                  val json = source.parseJson
-                  val book = json.convertTo[Book]
-                  BookDal.save(book).toString
-              }
-          }
       }
-    }
 }
 
 trait SearchRouter extends HttpService {
   val searchRoute =
-    path("search" / Segment) { searchParm =>
+    path("search" / Segment) { searchParm ⇒
       get {
         complete {
           s"searching for book: $searchParm...\nPlease wait"
         }
       }
     } ~
-      path("archive" / Segment) { date =>
+      path("archive" / Segment) { date ⇒
         get {
           complete {
             s"coming soon..."

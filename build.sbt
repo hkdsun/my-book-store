@@ -1,3 +1,5 @@
+import scalariform.formatter.preferences._
+
 organization := "com.hkdsun"
 
 name := "bookstore"
@@ -22,3 +24,12 @@ libraryDependencies ++= Seq(
 )
 
 Revolver.settings
+
+scalariformSettings
+
+ScalariformKeys.preferences := ScalariformKeys.preferences.value
+  .setPreference(RewriteArrowSymbols, true)
+  .setPreference(AlignParameters, true)
+  .setPreference(AlignSingleLineCaseStatements, true)
+  .setPreference(PlaceScaladocAsterisksBeneathSecondAsterisk, true)
+  .setPreference(MultilineScaladocCommentsStartOnFirstLine, true)

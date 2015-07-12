@@ -19,15 +19,15 @@ trait DataLayerBase {
 
   def find(id: ObjectId): Option[T] = {
     collection.findOneByID(id) match {
-      case Some(obj) =>
+      case Some(obj) ⇒
         make(Some(obj))
-      case None =>
+      case None ⇒
         None
     }
   }
 
-  def all: List[T] = collection.find.toList.map { obj => 
-      make(Some(obj)).get
+  def all: List[T] = collection.find.toList.map { obj ⇒
+    make(Some(obj)).get
   }
 
   def make(t: T): MongoDBObject
@@ -47,8 +47,8 @@ object BookDal extends DataLayerBase {
     builder.result
   }
 
-  def make(obj: Option[DBObject]): Option[Book] = obj.map { book =>
-    Book (id = book.getAs[ObjectId]("_id").map(_.toString),
+  def make(obj: Option[DBObject]): Option[Book] = obj.map { book ⇒
+    Book(id = book.getAs[ObjectId]("_id").map(_.toString),
       title = book.as[String]("title"),
       author = AuthorDal.make(book.getAs[DBObject]("author")).get,
       isbn = book.as[String]("isbn"))
@@ -59,8 +59,8 @@ object AuthorDal extends DataLayerBase {
   type T = Author
   val coll = "books"
 
-  def make(obj: Option[DBObject]): Option[Author] = obj.map { auth =>
-    Author (id = auth.getAs[ObjectId]("_id").map(_.toString),
+  def make(obj: Option[DBObject]): Option[Author] = obj.map { auth ⇒
+    Author(id = auth.getAs[ObjectId]("_id").map(_.toString),
       firstName = auth.as[String]("firstName"),
       lastName = auth.as[String]("lastName"))
   }
