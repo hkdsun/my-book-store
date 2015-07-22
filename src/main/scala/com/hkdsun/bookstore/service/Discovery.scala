@@ -7,8 +7,10 @@ import java.io.File
 import com.hkdsun.bookstore.utils.{ FileTools, EbookFile }
 
 case class StartDiscovery(path: String)
-case class FindBook(file: EbookFile)
-case class FoundBook(result: Book)
+case class DiscoverBook(file: EbookFile)
+case class DicoveryResult(result: Option[Book])
+case class DiscoveryQuery(title: String, authors: List[String], isbn: Option[String])
+
 
 class DiscoveryServiceActor extends Actor with Configuration {
   override def preStart = self ! StartDiscovery(rootDirectory)
@@ -16,8 +18,7 @@ class DiscoveryServiceActor extends Actor with Configuration {
   def receive: Receive = {
     case StartDiscovery(path) ⇒ {
       val files = FileTools.getEbooks(path)
-      for (EbookFile(name, _, _) ← files) {
-        println(s"file: $name")
+      for (file ← files) {
       }
     }
   }
@@ -25,11 +26,32 @@ class DiscoveryServiceActor extends Actor with Configuration {
 
 class DiscoveryManagerActor extends Actor {
   def receive: Receive = {
-    case FindBook(EbookFile(filename, _, path)) ⇒
-
+    case books: List[DiscoverBook] =>
+      for (book <- books) {
+      }
   }
 }
 
-class BookFinderActor extends Actor {
+object DiscoveryManagerActor {
+  def props: Props = Props(new DiscoveryManagerActor)
+}
 
+class IdentifierManagerActor extends Actor {
+  def receive: Receive = {
+    case DiscoverBook(file: EbookFile) {
+    }
+  }
+}
+
+object IdentifierManagerActor {
+  def props: Props = Props(new IdentifierManagerActor)
+}
+
+class AmazonBookFinder extends Actor {
+  def receive: Receive = {
+    case DiscoveryQuery(_,_,isbn) =>
+    case DiscoveryQuery(title,author,isbn) =>
+    case DiscoveryQuery(title,author,None) =>
+    case DiscoveryQuery(title,None,None) =>
+  }
 }
