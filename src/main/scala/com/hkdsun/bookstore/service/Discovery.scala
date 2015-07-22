@@ -1,6 +1,6 @@
 package com.hkdsun.bookstore.service
 
-import akka.actor.Actor
+import akka.actor.{ Actor, Props }
 import com.hkdsun.bookstore.config.Configuration
 import com.hkdsun.bookstore.domain._
 import java.io.File
@@ -8,7 +8,7 @@ import com.hkdsun.bookstore.utils.{ FileTools, EbookFile }
 
 case class StartDiscovery(path: String)
 case class DiscoverBook(file: EbookFile)
-case class DicoveryResult(result: Option[Book])
+case class DiscoveryResult(result: Option[Book])
 case class DiscoveryQuery(title: String, authors: List[String], isbn: Option[String])
 
 /*
@@ -25,6 +25,7 @@ class DiscoveryServiceActor extends Actor with Configuration {
     case StartDiscovery(path) ⇒ {
       val files = FileTools.getEbooks(path)
       for (file ← files) {
+        context.actorOf(DiscoveryManagerActor.props) ! file
       }
     }
   }
@@ -37,8 +38,8 @@ class DiscoveryServiceActor extends Actor with Configuration {
  */
 class DiscoveryManagerActor extends Actor {
   def receive: Receive = {
-    case books: List[DiscoverBook] =>
-      for (book <- books) {
+    case books: List[DiscoverBook] ⇒
+      for (book ← books) {
       }
   }
 }
@@ -56,7 +57,8 @@ object DiscoveryManagerActor {
  */
 class IdentifierManagerActor extends Actor {
   def receive: Receive = {
-    case DiscoverBook(file: EbookFile) {
+    case DiscoverBook(file: EbookFile) ⇒ {
+
     }
   }
 }
@@ -68,14 +70,14 @@ object IdentifierManagerActor {
 class AmazonBookFinder extends BookFinder {
   val baseUrl = "http://www.amazon.com/s/?url=search-alias%3Ddigital-text&field-keywords="
 
-  def findBook (file: EbookFile) = {
-    (filename, extension, abspath) = file
+  def findBook(file: EbookFile) = {
+    val (filename, extension, abspath) = file: EbookFile
   }
 
   def receive: Receive = {
-    case DiscoveryQuery(_,_,isbn) =>
-    case DiscoveryQuery(title,author,isbn) =>
-    case DiscoveryQuery(title,author,None) =>
-    case DiscoveryQuery(title,None,None) =>
+    case DiscoveryQuery(_, _, isbn)          ⇒
+    case DiscoveryQuery(title, author, isbn) ⇒
+    case DiscoveryQuery(title, author, None) ⇒
+    case DiscoveryQuery(title, None, None)   ⇒
   }
 }
