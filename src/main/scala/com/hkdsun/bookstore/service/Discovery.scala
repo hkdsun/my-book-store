@@ -9,7 +9,7 @@ import com.hkdsun.bookstore.utils.{ FileTools, EbookFile }
 case class StartDiscovery(path: String)
 case class DiscoverBook(file: EbookFile)
 case class DiscoveryResult(result: Option[Book])
-case class DiscoveryQuery(title: String, authors: List[String], isbn: Option[String])
+case class DiscoveryQuery(title: Option[String], authors: Option[List[String]], isbn: Option[String])
 
 /*
  * This actor is in charge of starting the discovery hierarchy
@@ -25,7 +25,7 @@ class DiscoveryServiceActor extends Actor with Configuration {
     case StartDiscovery(path) ⇒ {
       val files = FileTools.getEbooks(path)
       for (file ← files) {
-        context.actorOf(DiscoveryManagerActor.props) ! file
+        context.actorOf(DiscoveryManagerActor.props) ! DiscoverBook(file)
       }
     }
   }
@@ -38,9 +38,8 @@ class DiscoveryServiceActor extends Actor with Configuration {
  */
 class DiscoveryManagerActor extends Actor {
   def receive: Receive = {
-    case books: List[DiscoverBook] ⇒
-      for (book ← books) {
-      }
+    case a @ DiscoverBook(file) ⇒
+      context.actorOf(IdentifierManagerActor.props) ! a
   }
 }
 
@@ -70,14 +69,7 @@ object IdentifierManagerActor {
 class AmazonBookFinder extends BookFinder {
   val baseUrl = "http://www.amazon.com/s/?url=search-alias%3Ddigital-text&field-keywords="
 
-  def findBook(file: EbookFile) = {
-    val (filename, extension, abspath) = file: EbookFile
-  }
-
-  def receive: Receive = {
-    case DiscoveryQuery(_, _, isbn)          ⇒
-    case DiscoveryQuery(title, author, isbn) ⇒
-    case DiscoveryQuery(title, author, None) ⇒
-    case DiscoveryQuery(title, None, None)   ⇒
+  def findBook(query: String) = {
+    DiscoveryResult(None)
   }
 }
