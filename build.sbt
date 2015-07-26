@@ -23,6 +23,9 @@ libraryDependencies ++= Seq(
   "org.slf4j" % "slf4j-api" % "1.7.1"
 )
 
+libraryDependencies += "net.sourceforge.htmlcleaner" % "htmlcleaner" % "2.10"
+
+
 Revolver.settings
 
 scalariformSettings

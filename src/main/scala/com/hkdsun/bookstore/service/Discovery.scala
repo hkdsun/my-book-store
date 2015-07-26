@@ -4,7 +4,7 @@ import akka.actor.{ Actor, Props }
 import com.hkdsun.bookstore.config.Configuration
 import com.hkdsun.bookstore.domain._
 import java.io.File
-import com.hkdsun.bookstore.utils.{ FileTools, EbookFile }
+import com.hkdsun.bookstore.utils._
 
 case class StartDiscovery(path: String)
 case class DiscoverBook(file: EbookFile)
@@ -56,9 +56,8 @@ object DiscoveryManagerActor {
  */
 class IdentifierManagerActor extends Actor {
   def receive: Receive = {
-    case DiscoverBook(file: EbookFile) ⇒ {
-
-    }
+    case DiscoverBook(file: EbookFile) ⇒ context.actorOf(AmazonBookFinder.props) ! DiscoveryQuery(Some(file.filename), None, None)
+    case DiscoveryResult(Some(book))   ⇒ println(s"Found book: $book")
   }
 }
 
@@ -66,10 +65,3 @@ object IdentifierManagerActor {
   def props: Props = Props(new IdentifierManagerActor)
 }
 
-class AmazonBookFinder extends BookFinder {
-  val baseUrl = "http://www.amazon.com/s/?url=search-alias%3Ddigital-text&field-keywords="
-
-  def findBook(query: String) = {
-    DiscoveryResult(None)
-  }
-}
