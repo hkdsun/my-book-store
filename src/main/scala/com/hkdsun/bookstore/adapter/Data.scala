@@ -42,7 +42,7 @@ object BookDal extends DataLayerBase {
   def make(book: Book): MongoDBObject = {
     val builder = MongoDBObject.newBuilder
     builder += "title" -> book.title
-    builder += "author" -> AuthorDal.make(book.author)
+    builder += "authors" -> AuthorDal.makeList(book.authors)
     builder += "isbn" -> Some(book.isbn).getOrElse("")
     builder.result
   }
@@ -50,7 +50,7 @@ object BookDal extends DataLayerBase {
   def make(obj: Option[DBObject]): Option[Book] = obj.map { book ⇒
     Book(id = book.getAs[ObjectId]("_id").map(_.toString),
       title = book.as[String]("title"),
-      author = AuthorDal.make(book.getAs[DBObject]("author")).get,
+      authors = AuthorDal.makeList(book.getAs[List[DBObject]]("authors")).get,
       isbn = book.as[String]("isbn"))
   }
 }
@@ -61,14 +61,26 @@ object AuthorDal extends DataLayerBase {
 
   def make(obj: Option[DBObject]): Option[Author] = obj.map { auth ⇒
     Author(id = auth.getAs[ObjectId]("_id").map(_.toString),
-      firstName = auth.as[String]("firstName"),
-      lastName = auth.as[String]("lastName"))
+      name = auth.as[String]("name"))
+  }
+
+  def makeList(obj: Option[List[DBObject]]): Option[List[Author]] = obj.map { list ⇒
+    list.map { auth ⇒
+      make(Some(auth)).getOrElse(Author(name = "Unknown"))
+    }
+  }
+
+  def makeList(authors: List[Author]): MongoDBList = {
+    val builder = MongoDBList.newBuilder
+    authors.map { auth ⇒
+      builder += make(auth)
+    }
+    builder.result
   }
 
   def make(author: Author): MongoDBObject = {
     val builder = MongoDBObject.newBuilder
-    builder += "firstName" -> author.firstName
-    builder += "lastName" -> author.lastName
+    builder += "name" -> author.name
     builder.result
   }
 }

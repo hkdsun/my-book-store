@@ -4,7 +4,7 @@ import spray.json._
 import org.bson.types.ObjectId
 
 object BookProtocol extends DefaultJsonProtocol {
-  implicit val authorFormat: RootJsonFormat[Author] = jsonFormat3(Author)
+  implicit val authorFormat: RootJsonFormat[Author] = jsonFormat2(Author)
   implicit val bookFormat: RootJsonFormat[Book] = jsonFormat4(Book)
   implicit val errorFormat: RootJsonFormat[ErrorResponse] = jsonFormat2(ErrorResponse)
 }
@@ -12,13 +12,12 @@ object BookProtocol extends DefaultJsonProtocol {
 case class Book(
   val id: Option[String] = None,
   val title: String,
-  val author: Author,
+  val authors: List[Author],
   val isbn: String)
 
 case class Author(
   val id: Option[String] = None,
-  val firstName: String,
-  val lastName: String)
+  val name: String)
 
 case class ErrorResponse(
   val error_source: Option[String],

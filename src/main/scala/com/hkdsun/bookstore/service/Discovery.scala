@@ -1,6 +1,6 @@
 package com.hkdsun.bookstore.service
 
-import akka.actor.{ Actor, Props }
+import akka.actor.{ Actor, Props, Stash, ActorRef }
 import com.hkdsun.bookstore.config.Configuration
 import com.hkdsun.bookstore.domain._
 import java.io.File
@@ -54,11 +54,35 @@ object DiscoveryManagerActor {
  * services. I'm working on screen scraping Amazon search results
  * for the time being. Similar to how Calibre does it.
  */
-class IdentifierManagerActor extends Actor {
-  def receive: Receive = {
-    case DiscoverBook(file: EbookFile) ⇒ context.actorOf(AmazonBookFinder.props) ! DiscoveryQuery(Some(file.filename), None, None)
-    case DiscoveryResult(Some(book))   ⇒ println(s"Found book: $book")
+class IdentifierManagerActor extends Actor with Stash with Configuration {
+  import scala.collection.mutable.Set
+
+  val workers: Set[ActorRef] = Set.empty
+
+  def limit: Int = config.getInt("discovery.max-connections")
+
+  def waiting: Receive = {
+    case DiscoveryResult(Some(book)) ⇒
+      workers -= sender
+      println(s"Found book: $book")
+      context.become(working)
+    case _ ⇒
+      stash()
   }
+
+  def working: Receive = {
+    case DiscoverBook(file: EbookFile) ⇒
+      val worker = context.actorOf(AmazonBookFinder.props)
+      workers += worker
+      worker ! DiscoveryQuery(Some(file.filename), None, None)
+      if (workers.size > limit)
+        context.become(waiting)
+    case DiscoveryResult(Some(book)) ⇒
+      workers -= sender
+      println(s"Found book: $book")
+  }
+
+  def receive = working
 }
 
 object IdentifierManagerActor {

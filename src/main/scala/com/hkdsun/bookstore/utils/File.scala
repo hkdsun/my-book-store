@@ -21,8 +21,9 @@ class EbookFileVisitor extends SimpleFileVisitor[Path] with Configuration {
   val files = MSet.empty[EbookFile]
 
   override def visitFile(file: Path, attrs: BasicFileAttributes) = try {
-    val name = file.getFileName.toString
-    val ext = name.split('.').last
+    val fullname = file.getFileName.toString
+    val name = fullname.split('.').dropRight(1).mkString(".")
+    val ext = fullname.split('.').last
     if (supportExts.contains(ext))
       files += EbookFile(name, name.split('.').last, file)
     FileVisitResult.CONTINUE
