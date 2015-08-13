@@ -16,7 +16,7 @@ trait XmlScraper {
         Some(cleaner.clean(url))
       } catch {
         case e: IOException ⇒
-          Thread.sleep(1000)
+          Thread.sleep(200)
           tryToClean(n - 1, url)
         case e: Exception ⇒
           println(s"Trouble connecting to server while getting result page: ${e.getMessage}")
@@ -35,7 +35,7 @@ class AmazonScraper(query: String) extends XmlScraper {
   val resultNode: Option[TagNode] = listNode.flatMap(_.headOption)
 
   def detailsNode: Option[TagNode] = {
-    val detailsnode: Option[Array[TagNode]] = resultNode.map(_.getElementsByName("a", true).filter(li ⇒ li.getAttributeByName("class") != null && li.getAttributeByName("class").contains("access-detail")))
+    val detailsnode: Option[Array[TagNode]] = resultNode.map(_.getElementsByName("a", true).filter(a ⇒ a.getAttributeByName("class") != null && a.getAttributeByName("class").contains("detail-page")))
     val href: Option[TagNode] = detailsnode.flatMap(_.headOption)
     val detailsurl: Option[String] = href.map(_.getAttributeByName("href"))
     val root: Option[TagNode] = detailsurl match {
@@ -50,13 +50,19 @@ class AmazonScraper(query: String) extends XmlScraper {
   def title = {
     val elements = detailsNode.map(_.getElementsByName("h1", true))
     val titles = elements.map(_.filter(a ⇒ a.getAttributeByName("class") != null && a.getAttributeByName("class").contains("productTitle")))
-    titles.map(_.head.getText.toString)
+    titles.flatMap(_.headOption.map(_.getText.toString))
   }
 
   def authors = {
-    val elements: Option[Array[TagNode]] = resultNode.map(_.getElementsByName("a", true))
+    val elements: Option[Array[TagNode]] = detailsNode.map(_.getElementsByName("a", true))
     val authors: Option[List[String]] = elements.map(_.filter(a ⇒ a.getAttributeByName("class") != null && a.getAttributeByName("class").contains("contributorNameID"))).map(_.map(_.getText.toString).toList)
     authors
+  }
+
+  def description = {
+    val elements: Option[Array[TagNode]] = detailsNode.map(_.getElementsByName("div", true))
+    val descriptionNodes: Option[Array[TagNode]] = elements.map(_.filter(a ⇒ a.getAttributeByName("id") != null && a.getAttributeByName("id").contains("bookDesc_iframe_wrapper")))
+    descriptionNodes.flatMap(_.headOption.map(_.getText.toString))
   }
 
   def isbn = ???

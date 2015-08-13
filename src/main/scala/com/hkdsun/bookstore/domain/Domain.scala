@@ -5,13 +5,14 @@ import org.bson.types.ObjectId
 
 object BookProtocol extends DefaultJsonProtocol {
   implicit val authorFormat: RootJsonFormat[Author] = jsonFormat2(Author)
-  implicit val bookFormat: RootJsonFormat[Book] = jsonFormat4(Book)
+  implicit val bookFormat: RootJsonFormat[Book] = jsonFormat5(Book)
   implicit val errorFormat: RootJsonFormat[ErrorResponse] = jsonFormat2(ErrorResponse)
 }
 
 case class Book(
   val id: Option[String] = None,
   val title: String,
+  val description: String,
   val authors: List[Author],
   val isbn: String)
 

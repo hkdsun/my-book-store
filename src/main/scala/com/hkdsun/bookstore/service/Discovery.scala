@@ -1,12 +1,13 @@
 package com.hkdsun.bookstore.service
 
-import akka.actor.{ Actor, Props, Stash, ActorRef }
+import akka.actor._
 import com.hkdsun.bookstore.config.Configuration
 import com.hkdsun.bookstore.domain._
 import java.io.File
 import com.hkdsun.bookstore.utils._
+import com.hkdsun.bookstore.adapter._
 
-case class StartDiscovery(path: String)
+case class StartDiscovery()
 case class DiscoverBook(file: EbookFile)
 case class DiscoveryResult(result: Option[Book])
 case class DiscoveryQuery(title: Option[String], authors: Option[List[String]], isbn: Option[String])
@@ -19,11 +20,10 @@ case class DiscoveryQuery(title: Option[String], authors: Option[List[String]], 
  * support for multiple libraries is added
  */
 class DiscoveryServiceActor extends Actor with Configuration {
-  override def preStart = self ! StartDiscovery(rootDirectory)
-
   def receive: Receive = {
-    case StartDiscovery(path) ⇒ {
-      val files = FileTools.getEbooks(path)
+    case StartDiscovery() ⇒ {
+      println("Starting discovery")
+      val files = FileTools.getEbooks(rootDirectory)
       for (file ← files) {
         context.actorOf(DiscoveryManagerActor.props) ! DiscoverBook(file)
       }
@@ -53,9 +53,11 @@ object DiscoveryManagerActor {
  * Its children are BookFinders that grab results from different
  * services. I'm working on screen scraping Amazon search results
  * for the time being. Similar to how Calibre does it.
+ * I'm going to leave this pretty dumb at the moment
  */
 class IdentifierManagerActor extends Actor with Stash with Configuration {
   import scala.collection.mutable.Set
+  import BookDal._
 
   val workers: Set[ActorRef] = Set.empty
 
@@ -63,8 +65,9 @@ class IdentifierManagerActor extends Actor with Stash with Configuration {
 
   def waiting: Receive = {
     case DiscoveryResult(Some(book)) ⇒
-      workers -= sender
-      println(s"Found book: $book")
+      save(book)
+    case Terminated(a) ⇒
+      workers -= a
       context.become(working)
     case _ ⇒
       stash()
@@ -73,13 +76,16 @@ class IdentifierManagerActor extends Actor with Stash with Configuration {
   def working: Receive = {
     case DiscoverBook(file: EbookFile) ⇒
       val worker = context.actorOf(AmazonBookFinder.props)
+      context.watch(worker)
       workers += worker
       worker ! DiscoveryQuery(Some(file.filename), None, None)
       if (workers.size > limit)
         context.become(waiting)
     case DiscoveryResult(Some(book)) ⇒
-      workers -= sender
-      println(s"Found book: $book")
+      println(s"Found $book")
+      save(book)
+    case Terminated(a) ⇒
+      workers -= a
   }
 
   def receive = working

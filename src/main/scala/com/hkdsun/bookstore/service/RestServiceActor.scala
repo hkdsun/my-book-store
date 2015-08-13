@@ -1,6 +1,6 @@
 package com.hkdsun.bookstore.service
 
-import akka.actor.Actor
+import akka.actor._
 import com.hkdsun.bookstore.domain._
 import com.hkdsun.bookstore.domain.BookProtocol._
 import com.hkdsun.bookstore.adapter._
@@ -11,11 +11,12 @@ import org.bson.types.ObjectId
 
 class RestServiceActor extends Actor
     with BookRouter
-    with SearchRouter {
+    with SearchRouter
+    with DiscoveryRouter {
 
   implicit def actorRefFactory = context
 
-  def receive: Receive = runRoute(bookRoute ~ searchRoute)
+  def receive: Receive = runRoute(bookRoute ~ searchRoute ~ discoveryRouter)
 }
 
 trait BookRouter extends HttpService {
@@ -71,4 +72,17 @@ trait SearchRouter extends HttpService {
           }
         }
       }
+}
+
+trait DiscoveryRouter extends HttpService {
+  implicit def actorRefFactory: ActorRefFactory
+  val discoveryRouter =
+    path("discover") {
+      get {
+        complete {
+          actorRefFactory.actorSelection("/user/discovery-service") ! StartDiscovery()
+          "Started discovery.. please wait for results"
+        }
+      }
+    }
 }

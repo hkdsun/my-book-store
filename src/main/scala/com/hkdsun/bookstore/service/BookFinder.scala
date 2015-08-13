@@ -19,7 +19,7 @@ trait BookFinder extends Actor {
 class AmazonBookFinder extends BookFinder {
   def findBook(query: String) = {
     val a = AmazonScraper(query)
-    DiscoveryResult(Some(Book(title = a.title.getOrElse("Unknown"), authors = a.authors.getOrElse(List("Unknown")).map(auth ⇒ Author(name = auth)), isbn = "Not implemented")))
+    DiscoveryResult(Some(Book(title = a.title.getOrElse("Unknown"), authors = a.authors.getOrElse(List("Unknown")).map(auth ⇒ Author(name = auth)), description = a.description.getOrElse("Unknown"), isbn = "Not implemented")))
   }
 }
 

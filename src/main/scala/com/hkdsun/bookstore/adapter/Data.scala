@@ -13,7 +13,7 @@ trait DataLayerBase {
 
   def save(t: T) = {
     val tObj = make(t)
-    val result = MongoFactory.getCollection(coll).save(tObj)
+    val result = collection.insert(tObj)
     tObj.getAs[ObjectId]("_id").get
   }
 
@@ -44,6 +44,7 @@ object BookDal extends DataLayerBase {
     builder += "title" -> book.title
     builder += "authors" -> AuthorDal.makeList(book.authors)
     builder += "isbn" -> Some(book.isbn).getOrElse("")
+    builder += "description" -> book.description
     builder.result
   }
 
@@ -51,6 +52,7 @@ object BookDal extends DataLayerBase {
     Book(id = book.getAs[ObjectId]("_id").map(_.toString),
       title = book.as[String]("title"),
       authors = AuthorDal.makeList(book.getAs[List[DBObject]]("authors")).get,
+      description = book.as[String]("description"),
       isbn = book.as[String]("isbn"))
   }
 }
