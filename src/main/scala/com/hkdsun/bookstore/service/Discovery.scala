@@ -4,6 +4,7 @@ import akka.actor._
 import com.hkdsun.bookstore.config.Configuration
 import com.hkdsun.bookstore.domain._
 import java.io.File
+import com.hkdsun.bookstore.boot._
 import com.hkdsun.bookstore.utils._
 import com.hkdsun.bookstore.adapter._
 
@@ -28,6 +29,8 @@ class DiscoveryServiceActor extends Actor with Configuration {
         context.actorOf(DiscoveryManagerActor.props) ! DiscoverBook(file)
       }
     }
+    case ShutdownSignal() ⇒
+      self ! PoisonPill
   }
 }
 

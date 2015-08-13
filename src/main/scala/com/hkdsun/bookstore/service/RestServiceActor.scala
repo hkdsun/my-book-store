@@ -4,6 +4,7 @@ import akka.actor._
 import com.hkdsun.bookstore.domain._
 import com.hkdsun.bookstore.domain.BookProtocol._
 import com.hkdsun.bookstore.adapter._
+import com.hkdsun.bookstore.boot._
 import spray.httpx.SprayJsonSupport._
 import spray.json._
 import spray.routing.HttpService
@@ -16,7 +17,14 @@ class RestServiceActor extends Actor
 
   implicit def actorRefFactory = context
 
-  def receive: Receive = runRoute(bookRoute ~ searchRoute ~ discoveryRouter)
+  def router: Receive = runRoute(bookRoute ~ searchRoute ~ discoveryRouter)
+
+  def management: Receive = {
+    case ShutdownSignal ⇒
+      self ! PoisonPill
+  }
+
+  def receive = management orElse router
 }
 
 trait BookRouter extends HttpService {
@@ -80,9 +88,17 @@ trait DiscoveryRouter extends HttpService {
     path("discover") {
       get {
         complete {
-          actorRefFactory.actorSelection("/user/discovery-service") ! StartDiscovery()
+          actorRefFactory.actorSelection("/user/app-manager/discovery-service") ! StartDiscovery()
           "Started discovery.. please wait for results"
         }
       }
-    }
+    } ~
+      path("shutdown") {
+        get {
+          complete {
+            actorRefFactory.actorSelection("/user/app-manager") ! ShutdownSignal()
+            "System shutting down"
+          }
+        }
+      }
 }
