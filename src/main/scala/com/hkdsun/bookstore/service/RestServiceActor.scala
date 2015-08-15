@@ -17,8 +17,10 @@ class RestServiceActor extends Actor
 
   implicit def actorRefFactory = context
 
-  def router: Receive = runRoute(bookRoute ~ searchRoute ~ discoveryRouter)
+  val frontend = getFromResourceDirectory("app")
+  val api = pathPrefix("api") { bookRoute ~ searchRoute ~ discoveryRouter }
 
+  def router: Receive = runRoute(api ~ frontend)
   def management: Receive = {
     case ShutdownSignal ⇒
       self ! PoisonPill

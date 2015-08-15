@@ -3,6 +3,7 @@ package com.hkdsun.bookstore.utils
 import org.htmlcleaner.{ HtmlCleaner, TagNode }
 import java.net.{ URL, URLEncoder }
 import java.io.IOException
+import scala.collection.JavaConversions._
 
 trait XmlScraper {
   val cleaner: HtmlCleaner = new HtmlCleaner
@@ -47,22 +48,24 @@ class AmazonScraper(query: String) extends XmlScraper {
     root
   }
 
-  def title = {
-    val elements = detailsNode.map(_.getElementsByName("h1", true))
-    val titles = elements.map(_.filter(a ⇒ a.getAttributeByName("class") != null && a.getAttributeByName("class").contains("productTitle")))
+  def title: Option[String] = {
+    val elements = detailsNode.map(_.getElementsByName("span", true))
+    val titles = elements.map(_.filter(a ⇒ a.getAttributeByName("id") != null && a.getAttributeByName("id").contains("productTitle")))
     titles.flatMap(_.headOption.map(_.getText.toString))
   }
 
-  def authors = {
+  def authors: Option[List[String]] = {
     val elements: Option[Array[TagNode]] = detailsNode.map(_.getElementsByName("a", true))
     val authors: Option[List[String]] = elements.map(_.filter(a ⇒ a.getAttributeByName("class") != null && a.getAttributeByName("class").contains("contributorNameID"))).map(_.map(_.getText.toString).toList)
     authors
   }
 
-  def description = {
+  def description: Option[String] = {
     val elements: Option[Array[TagNode]] = detailsNode.map(_.getElementsByName("div", true))
-    val descriptionNodes: Option[Array[TagNode]] = elements.map(_.filter(a ⇒ a.getAttributeByName("id") != null && a.getAttributeByName("id").contains("bookDesc_iframe_wrapper")))
-    descriptionNodes.flatMap(_.headOption.map(_.getText.toString))
+    val subelements: Option[Array[TagNode]] = elements.flatMap(_.headOption.map(_.getElementsByName("noscript", true)))
+    // This will be helpful when things change
+    //detailsNode.get.getAllElementsList(true).toList.filter(a ⇒ a.getText.toString.contains("Hidden away") && a.getText.toString.length < 5000).foreach(a ⇒ println(s"Found node ${a.getName}:${a.getAttributes} and parent ${a.getParent}:${a.getAttributes} and grandparent ${a.getParent.getParent}:${a.getParent.getParent.getAttributes}"))
+    subelements.map(_.foldLeft("")((a, z) ⇒ z.getText.toString.trim + a))
   }
 
   def isbn = ???
