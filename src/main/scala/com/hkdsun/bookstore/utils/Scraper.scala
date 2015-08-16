@@ -1,30 +1,44 @@
 package com.hkdsun.bookstore.utils
 
+import com.hkdsun.bookstore.config.Configuration
 import org.htmlcleaner.{ HtmlCleaner, TagNode, CleanerProperties }
 import org.htmlcleaner.Utils._
 import java.net.{ URL, URLEncoder }
 import java.io.IOException
 import scala.collection.JavaConversions._
+import akka.actor._
+import akka.pattern.ask
+import scala.concurrent.duration._
+import scala.concurrent.{ Await, Future }
+import scala.concurrent.ExecutionContext.Implicits.global
 
-trait XmlScraper {
-  val cleaner: HtmlCleaner = new HtmlCleaner
-  val rootNode: Option[TagNode] = tryToClean(5, queryUrl)
+case class CleanUrl(c: HtmlCleaner, u: URL)
 
-  def tryToClean(retry: Int, url: URL): Option[TagNode] = retry match {
-    case 0 ⇒
-      None
-    case n ⇒
-      try {
-        Some(cleaner.clean(url))
+class CleanerActor extends Actor with Configuration {
+  var retry = 0
+
+  def receive = {
+    case CleanUrl(c: HtmlCleaner, u: URL) ⇒ {
+      val cleaned = try {
+        sender ! Some(c.clean(u))
       } catch {
-        case e: IOException ⇒
-          Thread.sleep(200)
-          tryToClean(n - 1, url)
-        case e: Exception ⇒
-          println(s"Trouble connecting to server while getting result page: ${e.getMessage}")
+        case e: Exception if retry < retryLimit ⇒
+          retry = retry + 1
+          context.system.scheduler.scheduleOnce(retryInterval milliseconds, self, CleanUrl(c, u))
+        case e: Throwable ⇒
+          sender ! None
+          println(s"Trouble cleaning url: ${e.getMessage}")
           throw e
       }
+    }
   }
+}
+
+abstract class XmlScraper(implicit system: ActorSystem) extends Configuration {
+  val cleaner: HtmlCleaner = new HtmlCleaner
+  val rootNode: Option[TagNode] = Await.result(tryToClean(queryUrl), 120 seconds)
+
+  def tryToClean(url: URL)(implicit arf: ActorRefFactory): Future[Option[TagNode]] = arf.actorOf(Props(new CleanerActor())).ask(CleanUrl(cleaner, url))(120 seconds).mapTo[Option[TagNode]]
 
   def title: Option[String]
   def authors: Option[List[String]]
@@ -32,7 +46,7 @@ trait XmlScraper {
   def queryUrl: URL
 }
 
-class AmazonScraper(query: String) extends XmlScraper {
+class AmazonScraper(query: String)(implicit system: ActorSystem) extends XmlScraper {
   val listNode: Option[Array[TagNode]] = rootNode.map(_.getElementsByName("li", true).filter(li ⇒ li.getAttributeByName("class") != null && li.getAttributeByName("class").contains("result-item")))
   val resultNode: Option[TagNode] = listNode.flatMap(_.headOption)
 
@@ -44,7 +58,7 @@ class AmazonScraper(query: String) extends XmlScraper {
       case None ⇒
         None
       case Some(url) ⇒
-        tryToClean(5, new URL(url))
+        Await.result(tryToClean(new URL(url)), 120 seconds)
     }
     root
   }
@@ -75,5 +89,5 @@ class AmazonScraper(query: String) extends XmlScraper {
 }
 
 object AmazonScraper {
-  def apply(query: String) = new AmazonScraper(query)
+  def apply(query: String)(implicit system: ActorSystem) = new AmazonScraper(query)
 }

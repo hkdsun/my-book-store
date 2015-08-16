@@ -7,10 +7,12 @@ import java.io.File
 import com.hkdsun.bookstore.boot._
 import com.hkdsun.bookstore.utils._
 import com.hkdsun.bookstore.adapter._
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 case class StartDiscovery()
 case class DiscoverBook(file: EbookFile)
-case class DiscoveryResult(result: Option[Book])
+case class DiscoveryResult(result: Future[Option[Book]])
 case class DiscoveryQuery(title: Option[String], authors: Option[List[String]], isbn: Option[String])
 
 /*
@@ -67,8 +69,11 @@ class IdentifierManagerActor extends Actor with Stash with Configuration {
   def limit: Int = config.getInt("discovery.max-connections")
 
   def waiting: Receive = {
-    case DiscoveryResult(Some(book)) ⇒
-      save(book)
+    case DiscoveryResult(f: Future[Option[Book]]) ⇒
+      f.onSuccess {
+        case Some(book) ⇒
+          save(book)
+      }
     case Terminated(a) ⇒
       workers -= a
       context.become(working)
@@ -78,15 +83,18 @@ class IdentifierManagerActor extends Actor with Stash with Configuration {
 
   def working: Receive = {
     case DiscoverBook(file: EbookFile) ⇒
-      val worker = context.actorOf(AmazonBookFinder.props)
+      val worker = context.actorOf(AmazonBookFinder.props(context.system))
       context.watch(worker)
       workers += worker
       worker ! DiscoveryQuery(Some(file.filename), None, None)
       if (workers.size > limit)
         context.become(waiting)
-    case DiscoveryResult(Some(book)) ⇒
-      println(s"Found $book")
-      save(book)
+    case DiscoveryResult(f: Future[Option[Book]]) ⇒
+      f.onSuccess {
+        case Some(book) ⇒
+          println(s"Found $book")
+          save(book)
+      }
     case Terminated(a) ⇒
       workers -= a
   }
