@@ -1,0 +1,55 @@
+<div class="row alerts-container" data-ng-controller="AlertsCtrl" data-ng-show="alerts.length">
+  <div class="col-xs-12">
+    <alert data-ng-repeat="alert in alerts" type="{{alert.type}}" close="closeAlert($index)">{{alert.msg}}</alert>
+  </div>
+</div>
+
+<div class="row">
+	<div class="col-lg-3 col-md-6 col-xs-12">
+		<rd-widget>
+			<rd-widget-body>
+				<div class="widget-icon green pull-left">
+					<i class="fa fa-book"></i>
+				</div>
+        <div class="title">{{ books.length }}</div>
+				<div class="comment">Books</div>
+			</rd-widget-body>
+		</rd-widget>
+	</div>
+</div>
+
+<div class="row">
+	<div class="col-lg-6">
+		<rd-widget>
+      <rd-widget-header icon="fa-book" title="Books">
+        <input ng-model="query.field" type="text" placeholder="Search" class="form-control input-sm">
+			</rd-widget-header>
+			<rd-widget-body classes="medium no-padding">
+				<div class="table-responsive">
+					<table class="table">
+						<thead>
+							<tr><th class="text-center">#</th><th>Title</th><th>Authors</th></tr>
+						</thead>
+						<tbody>
+            <tr ng-repeat="book in books | filter:query.field" ng-click="setBookId(book.id)"><td class="text-center">{{$index+1}}</td><td>{{book.title}}</td><td><span ng-repeat="author in book.authors">{{author.name}}{{$last ? '' : ', '}}</span></td></tr>
+						</tbody>
+					</table>
+        		</div>
+			</rd-widget-body>
+		<rd-widget>
+	</div>
+</div>
+
+<div class="row">
+	<div class="col-lg-6">
+   		<rd-widget>
+   			<rd-widget-header icon="fa-plus" title="Description">
+   			</rd-widget-header>
+   			<rd-widget-body>
+				<div class="message">
+          {{selectedBook.description || "Select one of the items above to see the description and download links"}}
+				</div>
+   			</rd-widget-body>
+   		</rd-widget>
+	</div>
+</div>

@@ -1,6 +1,7 @@
 package com.hkdsun.bookstore.utils
 
-import org.htmlcleaner.{ HtmlCleaner, TagNode }
+import org.htmlcleaner.{ HtmlCleaner, TagNode, CleanerProperties }
+import org.htmlcleaner.Utils._
 import java.net.{ URL, URLEncoder }
 import java.io.IOException
 import scala.collection.JavaConversions._
@@ -51,12 +52,12 @@ class AmazonScraper(query: String) extends XmlScraper {
   def title: Option[String] = {
     val elements = detailsNode.map(_.getElementsByName("span", true))
     val titles = elements.map(_.filter(a ⇒ a.getAttributeByName("id") != null && a.getAttributeByName("id").contains("productTitle")))
-    titles.flatMap(_.headOption.map(_.getText.toString))
+    titles.flatMap(_.headOption.map(tit ⇒ escapeHtml(tit.getText.toString, new CleanerProperties())))
   }
 
   def authors: Option[List[String]] = {
     val elements: Option[Array[TagNode]] = detailsNode.map(_.getElementsByName("a", true))
-    val authors: Option[List[String]] = elements.map(_.filter(a ⇒ a.getAttributeByName("class") != null && a.getAttributeByName("class").contains("contributorNameID"))).map(_.map(_.getText.toString).toList)
+    val authors: Option[List[String]] = elements.map(_.filter(a ⇒ a.getAttributeByName("class") != null && a.getAttributeByName("class").contains("contributorNameID"))).map(_.map(t ⇒ escapeHtml(t.getText.toString, new CleanerProperties())).toList)
     authors
   }
 
@@ -65,7 +66,7 @@ class AmazonScraper(query: String) extends XmlScraper {
     val subelements: Option[Array[TagNode]] = elements.flatMap(_.headOption.map(_.getElementsByName("noscript", true)))
     // This will be helpful when things change
     //detailsNode.get.getAllElementsList(true).toList.filter(a ⇒ a.getText.toString.contains("Hidden away") && a.getText.toString.length < 5000).foreach(a ⇒ println(s"Found node ${a.getName}:${a.getAttributes} and parent ${a.getParent}:${a.getAttributes} and grandparent ${a.getParent.getParent}:${a.getParent.getParent.getAttributes}"))
-    subelements.map(_.foldLeft("")((a, z) ⇒ z.getText.toString.trim + a))
+    subelements.map(sub ⇒ escapeHtml(sub.foldLeft("")((a, z) ⇒ z.getText.toString.trim + a), new CleanerProperties()))
   }
 
   def isbn = ???
