@@ -21,17 +21,17 @@ trait BookFinder extends Actor {
 class AmazonBookFinder(implicit system: ActorSystem) extends BookFinder {
   def findBook(query: String)(implicit ec: ExecutionContext): Future[Option[Book]] = {
     val scraper = AmazonScraper(query)
-    val book = Future {
-      val title = scraper.title
-      val authors = scraper.authors
-      val desc = scraper.description
-
-      if (title.isDefined && authors.isDefined && desc.isDefined)
-        Some(Book(title = title.get, authors = authors.get.map(n ⇒ Author(name = n)), description = desc.get, isbn = "not implemented"))
+    for {
+      title ← scraper.title
+      authors ← scraper.authors
+      description ← scraper.description
+      defined = title.isDefined && authors.isDefined && description.isDefined
+    } yield {
+      if (defined)
+        Some(Book(title = title.get, description = description.get, authors = authors.get.map(a ⇒ Author(name = a)), isbn = "Not Implemented"))
       else
         None
     }
-    book
   }
 }
 
