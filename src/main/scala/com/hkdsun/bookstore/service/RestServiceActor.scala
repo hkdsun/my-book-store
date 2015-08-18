@@ -17,7 +17,12 @@ class RestServiceActor extends Actor
 
   implicit def actorRefFactory = context
 
-  val frontend = getFromResourceDirectory("app/dist")
+  val frontend = get {
+    compressResponse()(getFromResourceDirectory("app/dist")) ~
+      path("") {
+        getFromResource("app/dist/index.html")
+      }
+  }
   val api = pathPrefix("api") { bookRoute ~ searchRoute ~ discoveryRouter }
 
   def router: Receive = runRoute(api ~ frontend)

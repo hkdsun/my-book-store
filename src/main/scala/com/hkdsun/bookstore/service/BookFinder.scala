@@ -6,6 +6,7 @@ import com.hkdsun.bookstore.utils.{ EbookFile }
 import com.hkdsun.bookstore.domain._
 import com.hkdsun.bookstore.utils._
 import scala.concurrent.ExecutionContext.Implicits.global
+import com.typesafe.scalalogging.LazyLogging
 
 trait BookFinder extends Actor {
   def findBook(query: String)(implicit ec: ExecutionContext): Future[Option[Book]]
@@ -18,7 +19,7 @@ trait BookFinder extends Actor {
   }
 }
 
-class AmazonBookFinder(implicit system: ActorSystem) extends BookFinder {
+class AmazonBookFinder(implicit system: ActorSystem) extends BookFinder with LazyLogging {
   def findBook(query: String)(implicit ec: ExecutionContext): Future[Option[Book]] = {
     val scraper = AmazonScraper(query)
     for {
@@ -27,10 +28,12 @@ class AmazonBookFinder(implicit system: ActorSystem) extends BookFinder {
       description ← scraper.description
       defined = title.isDefined && authors.isDefined && description.isDefined
     } yield {
-      if (defined)
+      if (defined) {
         Some(Book(title = title.get, description = description.get, authors = authors.get.map(a ⇒ Author(name = a)), isbn = "Not Implemented"))
-      else
+      } else {
+        logger.warn(s"An incomplete book was ignored - title: $title - author: $authors - description : $description")
         None
+      }
     }
   }
 }

@@ -8,13 +8,10 @@ trait DataLayerBase {
   type T
   val coll: String
 
-  lazy val conn = MongoFactory.getConnection
   lazy val collection = MongoFactory.getCollection(coll)
 
   def save(t: T) = {
-    val tObj = make(t)
-    val result = collection.insert(tObj)
-    tObj.getAs[ObjectId]("_id").get
+    collection.save(make(t))
   }
 
   def find(id: ObjectId): Option[T] = {
@@ -54,6 +51,12 @@ object BookDal extends DataLayerBase {
       authors = AuthorDal.makeList(book.getAs[List[DBObject]]("authors")).get,
       description = book.as[String]("description"),
       isbn = book.as[String]("isbn"))
+  }
+
+  def findByTitle(title: String): Option[ObjectId] = {
+    val builder = MongoDBObject.newBuilder
+    builder += "title" -> title
+    collection.findOne(builder.result).map(_.as[ObjectId]("_id"))
   }
 }
 

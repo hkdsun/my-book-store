@@ -11,10 +11,11 @@ import akka.pattern.ask
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 import scala.concurrent.ExecutionContext.Implicits.global
+import com.typesafe.scalalogging.LazyLogging
 
 case class CleanUrl(c: HtmlCleaner, u: URL)
 
-class CleanerActor extends Actor with Configuration {
+class CleanerActor extends Actor with Configuration with LazyLogging {
   var retry = 0
 
   def receive = {
@@ -27,8 +28,7 @@ class CleanerActor extends Actor with Configuration {
           context.system.scheduler.scheduleOnce(retryInterval milliseconds, self, CleanUrl(c, u))
         case e: Throwable ⇒
           sender ! None
-          println(s"Trouble cleaning url: ${e.getMessage}")
-          throw e
+          logger.error(s"Trouble cleaning url: ${e.getMessage}")
       }
     }
   }

@@ -9,6 +9,7 @@ import com.hkdsun.bookstore.utils._
 import com.hkdsun.bookstore.adapter._
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
+import com.typesafe.scalalogging.LazyLogging
 
 case class StartDiscovery()
 case class DiscoverBook(file: EbookFile)
@@ -22,10 +23,10 @@ case class DiscoveryQuery(title: Option[String], authors: Option[List[String]], 
  * will fire off discovery for a different root. Possibly when
  * support for multiple libraries is added
  */
-class DiscoveryServiceActor extends Actor with Configuration {
+class DiscoveryServiceActor extends Actor with Configuration with LazyLogging {
   def receive: Receive = {
     case StartDiscovery() ⇒ {
-      println("Starting discovery")
+      logger.info("Starting discovery")
       val files = FileTools.getEbooks(rootDirectory)
       for (file ← files) {
         context.actorOf(DiscoveryManagerActor.props) ! DiscoverBook(file)
@@ -72,7 +73,8 @@ class IdentifierManagerActor extends Actor with Stash with Configuration {
     case DiscoveryResult(f: Future[Option[Book]]) ⇒
       f.onSuccess {
         case Some(book) ⇒
-          save(book)
+          if (!findByTitle(book.title).isDefined)
+            save(book)
       }
     case Terminated(a) ⇒
       workers -= a
@@ -92,8 +94,8 @@ class IdentifierManagerActor extends Actor with Stash with Configuration {
     case DiscoveryResult(f: Future[Option[Book]]) ⇒
       f.onSuccess {
         case Some(book) ⇒
-          println(s"Found $book")
-          save(book)
+          if (!findByTitle(book.title).isDefined)
+            save(book)
       }
     case Terminated(a) ⇒
       workers -= a
