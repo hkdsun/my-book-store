@@ -1,91 +1,78 @@
-package com.hkdsun.bookstore.adapter
+package com.hkdsun.bookstore
 
-import com.hkdsun.bookstore.domain._
-import com.mongodb.casbah.Imports._
-import org.bson.types.ObjectId
+import reactivemongo.api._
+import reactivemongo.api.collections.bson.BSONCollection
+import reactivemongo.api.commands.{ WriteResult, UpdateWriteResult }
+import reactivemongo.bson._
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import scala.util.Success
 
 trait DataLayerBase {
   type T
-  val coll: String
 
-  lazy val collection = MongoFactory.getCollection(coll)
+  val collection: BSONCollection
 
-  def save(t: T) = {
-    collection.save(make(t))
+  def insert(t: T): Future[WriteResult] = {
+    collection.insert(t)
   }
 
-  def find(id: ObjectId): Option[T] = {
-    collection.findOneByID(id) match {
-      case Some(obj) ⇒
-        make(Some(obj))
-      case None ⇒
-        None
-    }
+  def findById(id: String): Future[Option[T]] = {
+    collection.find(BSONDocument("_id" -> BSONObjectID(id))).one[T]
   }
 
-  def all: List[T] = collection.find.toList.map { obj ⇒
-    make(Some(obj)).get
+  def all: Future[List[T]] = {
+    collection.find(BSONDocument()).cursor[T]().collect[List]()
   }
 
-  def make(t: T): MongoDBObject
-  def make(obj: Option[DBObject]): Option[T]
+  def upsert(t: T): Future[UpdateWriteResult]
 
+  implicit val reader: BSONDocumentReader[T]
+  implicit val writer: BSONDocumentWriter[T]
 }
 
-object BookDal extends DataLayerBase {
+trait BookDal extends DataLayerBase {
   type T = Book
-  val coll = "books"
 
-  def make(book: Book): MongoDBObject = {
-    val builder = MongoDBObject.newBuilder
-    builder += "title" -> book.title
-    builder += "authors" -> AuthorDal.makeList(book.authors)
-    builder += "isbn" -> Some(book.isbn).getOrElse("")
-    builder += "description" -> book.description
-    builder.result
+  def upsert(book: Book): Future[UpdateWriteResult] = {
+    val selector = BSONDocument("title" -> book.title)
+    collection.update(selector, book, upsert = true)
   }
 
-  def make(obj: Option[DBObject]): Option[Book] = obj.map { book ⇒
-    Book(id = book.getAs[ObjectId]("_id").map(_.toString),
-      title = book.as[String]("title"),
-      authors = AuthorDal.makeList(book.getAs[List[DBObject]]("authors")).get,
-      description = book.as[String]("description"),
-      isbn = book.as[String]("isbn"))
+  def findByTitle(title: String): Future[Option[Book]] = {
+    collection.find(BSONDocument("title" -> title)).one[Book]
   }
 
-  def findByTitle(title: String): Option[ObjectId] = {
-    val builder = MongoDBObject.newBuilder
-    builder += "title" -> title
-    collection.findOne(builder.result).map(_.as[ObjectId]("_id"))
+  def findByAuthors(authors: List[String]): Future[Option[Book]] = {
+    collection.find(BSONDocument("authors" -> authors)).one[Book]
+  }
+
+  def countByPath(path: String): Future[Int] = {
+    collection.count(Some(BSONDocument("filename" -> path)))
+  }
+
+  implicit val reader: BSONDocumentReader[Book] = new BSONDocumentReader[Book] {
+    def read(bson: BSONDocument): Book = {
+      Book(id = bson.getAs[BSONObjectID]("_id").map(_.stringify),
+        title = bson.getAs[String]("title").getOrElse(throw new NoSuchFieldException("that document didn't have a title")),
+        description = bson.getAs[String]("description").getOrElse(throw new NoSuchFieldException("that document didn't have a description")),
+        authors = bson.getAs[List[String]]("authors").toList.flatten,
+        isbn = bson.getAs[String]("isbn").getOrElse(throw new NoSuchFieldException("that document didn't have a ISBN")),
+        filename = bson.getAs[String]("filename").getOrElse(throw new NoSuchFieldException("that document didn't have a filename"))
+      )
+    }
+  }
+  implicit val writer: BSONDocumentWriter[Book] = new BSONDocumentWriter[Book] {
+    override def write(t: Book): BSONDocument = BSONDocument(
+      "title" -> t.title,
+      "description" -> t.description,
+      "authors" -> t.authors,
+      "isbn" -> t.isbn,
+      "filename" -> t.filename
+    )
   }
 }
 
-object AuthorDal extends DataLayerBase {
-  type T = Author
-  val coll = "books"
-
-  def make(obj: Option[DBObject]): Option[Author] = obj.map { auth ⇒
-    Author(id = auth.getAs[ObjectId]("_id").map(_.toString),
-      name = auth.as[String]("name"))
-  }
-
-  def makeList(obj: Option[List[DBObject]]): Option[List[Author]] = obj.map { list ⇒
-    list.map { auth ⇒
-      make(Some(auth)).getOrElse(Author(name = "Unknown"))
-    }
-  }
-
-  def makeList(authors: List[Author]): MongoDBList = {
-    val builder = MongoDBList.newBuilder
-    authors.map { auth ⇒
-      builder += make(auth)
-    }
-    builder.result
-  }
-
-  def make(author: Author): MongoDBObject = {
-    val builder = MongoDBObject.newBuilder
-    builder += "name" -> author.name
-    builder.result
-  }
+object BookDalProduction extends BookDal {
+  val collection: BSONCollection = MongoDB("books")
 }

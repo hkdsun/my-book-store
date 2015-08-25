@@ -1,14 +1,15 @@
-package com.hkdsun.bookstore.service
+package com.hkdsun.bookstore
 
 import akka.actor._
-import com.hkdsun.bookstore.domain._
-import com.hkdsun.bookstore.domain.BookProtocol._
-import com.hkdsun.bookstore.adapter._
-import com.hkdsun.bookstore.boot._
+import com.hkdsun.bookstore.BookProtocol._
+import reactivemongo.bson.BSONObjectID
 import spray.httpx.SprayJsonSupport._
 import spray.json._
 import spray.routing.HttpService
-import org.bson.types.ObjectId
+import spray.routing.directives.OnSuccessFutureMagnet
+import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
+import scala.util.{ Failure, Success }
 
 class RestServiceActor extends Actor
     with BookRouter
@@ -16,6 +17,7 @@ class RestServiceActor extends Actor
     with DiscoveryRouter {
 
   implicit def actorRefFactory = context
+  implicit val ec = context.dispatcher
 
   val frontend = get {
     compressResponse()(getFromResourceDirectory("app/dist")) ~
@@ -35,28 +37,24 @@ class RestServiceActor extends Actor
 }
 
 trait BookRouter extends HttpService {
+  implicit val ec: ExecutionContext
+
   val bookRoute =
     path("book" / Segment) { bookId ⇒
       get {
-        complete {
-          try {
-            val oid = new ObjectId(bookId)
-            BookDal.find(oid) match {
-              case None ⇒
-                ErrorResponse(Some("Book search"), "Book not found")
-              case Some(book) ⇒
-                book
-            }
-          } catch {
-            case err: IllegalArgumentException ⇒ ErrorResponse(Some("Book search"), "Invalid ID")
-          }
+        val bookFuture = BookDalProduction.findById(bookId).mapTo[Option[Book]]
+        onSuccess(OnSuccessFutureMagnet(bookFuture)) {
+          case Some(book) ⇒
+            complete(book)
+          case None ⇒
+            complete(ErrorResponse(Some("Book search"), "Book not found"))
         }
       }
     } ~
       path("book") {
         get {
           complete {
-            BookDal.all
+            BookDalProduction.all
           }
         } ~
           post {
@@ -64,7 +62,7 @@ trait BookRouter extends HttpService {
               complete {
                 val json = source.parseJson
                 val book = json.convertTo[Book]
-                BookDal.save(book).toString
+                BookDalProduction.insert(book).toString
               }
             }
           }

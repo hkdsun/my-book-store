@@ -1,10 +1,9 @@
-package com.hkdsun.bookstore.utils
+package com.hkdsun.bookstore
 
 import java.nio.file._
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.{ EnumSet ⇒ JEnumSet }
 import scala.collection.mutable.{ Set ⇒ MSet }
-import com.hkdsun.bookstore.config.Configuration
 
 object FileTools {
   def getEbooks(str: String): Set[EbookFile] = {

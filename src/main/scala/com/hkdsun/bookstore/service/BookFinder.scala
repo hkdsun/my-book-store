@@ -1,26 +1,23 @@
-package com.hkdsun.bookstore.service
+package com.hkdsun.bookstore
 
 import akka.actor._
 import scala.concurrent.{ Future, ExecutionContext }
-import com.hkdsun.bookstore.utils.{ EbookFile }
-import com.hkdsun.bookstore.domain._
-import com.hkdsun.bookstore.utils._
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.typesafe.scalalogging.LazyLogging
 
 trait BookFinder extends Actor {
-  def findBook(query: String)(implicit ec: ExecutionContext): Future[Option[Book]]
+  def findBook(query: String, filename: String)(implicit ec: ExecutionContext): Future[Option[Book]]
 
   def receive: Receive = {
-    case DiscoveryQuery(Some(title), Some(author), Some(isbn)) ⇒ sender ! DiscoveryResult(findBook(s"$title by ${author.mkString(", ")} $isbn"))
-    case DiscoveryQuery(Some(title), Some(author), None)       ⇒ sender ! DiscoveryResult(findBook(s"$title by ${author.mkString(", ")}"))
-    case DiscoveryQuery(Some(title), None, None)               ⇒ sender ! DiscoveryResult(findBook(title))
-    case DiscoveryQuery(None, None, Some(isbn))                ⇒ sender ! DiscoveryResult(findBook(isbn))
+    case DiscoveryQuery(Some(title), Some(author), Some(isbn), path) ⇒ sender ! DiscoveryResult(findBook(s"$title by ${author.mkString(", ")} $isbn", path))
+    case DiscoveryQuery(Some(title), Some(author), None, path)       ⇒ sender ! DiscoveryResult(findBook(s"$title by ${author.mkString(", ")}", path))
+    case DiscoveryQuery(Some(title), None, None, path)               ⇒ sender ! DiscoveryResult(findBook(title, path))
+    case DiscoveryQuery(None, None, Some(isbn), path)                ⇒ sender ! DiscoveryResult(findBook(isbn, path))
   }
 }
 
 class AmazonBookFinder(implicit system: ActorSystem) extends BookFinder with LazyLogging {
-  def findBook(query: String)(implicit ec: ExecutionContext): Future[Option[Book]] = {
+  def findBook(query: String, filename: String)(implicit ec: ExecutionContext): Future[Option[Book]] = {
     val scraper = AmazonScraper(query)
     for {
       title ← scraper.title
@@ -29,7 +26,8 @@ class AmazonBookFinder(implicit system: ActorSystem) extends BookFinder with Laz
       defined = title.isDefined && authors.isDefined && description.isDefined
     } yield {
       if (defined) {
-        Some(Book(title = title.get, description = description.get, authors = authors.get.map(a ⇒ Author(name = a)), isbn = "Not Implemented"))
+        //TODO implement ISBN
+        Some(Book(title = title.get, description = description.get, authors = authors.get, isbn = "Not Implemented", filename = filename))
       } else {
         logger.warn(s"An incomplete book was ignored - title: $title - author: $authors - description : $description")
         None

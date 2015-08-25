@@ -1,10 +1,8 @@
-package com.hkdsun.bookstore.boot
+package com.hkdsun.bookstore
 
 import akka.actor._
 import akka.io.IO
 import spray.can.Http
-import com.hkdsun.bookstore.config.Configuration
-import com.hkdsun.bookstore.service._
 
 object Boot extends App with Configuration {
   val system = ActorSystem("rest-book-store-system")

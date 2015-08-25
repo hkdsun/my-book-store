@@ -4,7 +4,6 @@ import akka.actor.{ Props, Actor, ActorSystem }
 import akka.testkit.{ TestKit, TestActorRef, ImplicitSender }
 import org.scalatest.{ WordSpecLike, BeforeAndAfterAll }
 import org.scalatest.Matchers
-import com.hkdsun.bookstore.utils._
 import scala.concurrent.Await
 import scala.concurrent.duration._
 

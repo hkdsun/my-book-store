@@ -1,6 +1,5 @@
-package com.hkdsun.bookstore.utils
+package com.hkdsun.bookstore
 
-import com.hkdsun.bookstore.config.Configuration
 import org.htmlcleaner.{ HtmlCleaner, TagNode, CleanerProperties }
 import org.htmlcleaner.Utils._
 import java.net.{ URL, URLEncoder }

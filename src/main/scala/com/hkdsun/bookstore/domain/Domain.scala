@@ -1,25 +1,18 @@
-package com.hkdsun.bookstore.domain
+package com.hkdsun.bookstore
 
 import spray.json._
-import org.bson.types.ObjectId
 
 object BookProtocol extends DefaultJsonProtocol {
-  implicit val authorFormat: RootJsonFormat[Author] = jsonFormat2(Author)
-  implicit val bookFormat: RootJsonFormat[Book] = jsonFormat5(Book)
+  implicit val bookFormat: RootJsonFormat[Book] = jsonFormat6(Book)
   implicit val errorFormat: RootJsonFormat[ErrorResponse] = jsonFormat2(ErrorResponse)
 }
 
-case class Book(
-  val id: Option[String] = None,
-  val title: String,
-  val description: String,
-  val authors: List[Author],
-  val isbn: String)
+case class Book(id: Option[String] = None,
+                title: String,
+                description: String,
+                authors: List[String],
+                isbn: String,
+                filename: String)
 
-case class Author(
-  val id: Option[String] = None,
-  val name: String)
-
-case class ErrorResponse(
-  val error_source: Option[String],
-  val reason: String)
+case class ErrorResponse(error_source: Option[String],
+                         reason: String)
