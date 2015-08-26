@@ -2,23 +2,34 @@ package com.hkdsun.bookstore
 
 import akka.actor._
 import scala.concurrent.{ Future, ExecutionContext }
+import scala.util.{ Failure, Success }
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.typesafe.scalalogging.LazyLogging
 
-trait BookFinder extends Actor {
-  def findBook(query: String, filename: String)(implicit ec: ExecutionContext): Future[Option[Book]]
+case class BookNotFoundException(message: String) extends Exception(message)
+case class ScrapingRetryLimitReached(message: String) extends Exception(message)
+
+trait BookFinder extends Actor with LazyLogging {
+  val ima: ActorRef //Identifiermanageractor
+  def scraperProvider(query: String): XmlScraper
 
   def receive: Receive = {
-    case DiscoveryQuery(Some(title), Some(author), Some(isbn), path) ⇒ sender ! DiscoveryResult(findBook(s"$title by ${author.mkString(", ")} $isbn", path))
-    case DiscoveryQuery(Some(title), Some(author), None, path)       ⇒ sender ! DiscoveryResult(findBook(s"$title by ${author.mkString(", ")}", path))
-    case DiscoveryQuery(Some(title), None, None, path)               ⇒ sender ! DiscoveryResult(findBook(title, path))
-    case DiscoveryQuery(None, None, Some(isbn), path)                ⇒ sender ! DiscoveryResult(findBook(isbn, path))
+    case request @ DiscoveryRequest(Some(title), path) ⇒
+      val bookF = findBook(title, path)
+      bookF.onComplete {
+        case Success(a @ Some(book)) ⇒
+          ima ! DiscoveryResult(a)
+        case Success(None) ⇒
+          //logger.debug(s"""Couldn't find book for query "$title" and path "$path"""")
+          ima ! DiscoveryFailed(request, BookNotFoundException(s"""Couldn't find book for query "$title" and path "$path""""))
+        case Failure(e) ⇒
+          //logger.debug(s"""Failure trying to find book for query "$title" and path "$path"""")
+          ima ! DiscoveryFailed(request, e)
+      }
   }
-}
 
-class AmazonBookFinder(implicit system: ActorSystem) extends BookFinder with LazyLogging {
   def findBook(query: String, filename: String)(implicit ec: ExecutionContext): Future[Option[Book]] = {
-    val scraper = AmazonScraper(query)
+    val scraper = scraperProvider(query)
     for {
       title ← scraper.title
       authors ← scraper.authors
@@ -29,13 +40,25 @@ class AmazonBookFinder(implicit system: ActorSystem) extends BookFinder with Laz
         //TODO implement ISBN
         Some(Book(title = title.get, description = description.get, authors = authors.get, isbn = "Not Implemented", filename = filename))
       } else {
-        logger.debug(s"An incomplete book was ignored - filename: $filename - title: $title - author: $authors - description : $description")
+        //logger.debug(s"An incomplete book was ignored - filename: $filename - title: $title - author: $authors - description : $description")
         None
       }
     }
   }
 }
 
+class AmazonBookFinder(val ima: ActorRef)(implicit system: ActorSystem) extends BookFinder {
+  def scraperProvider(query: String) = AmazonScraper(query)
+}
+
+class GoogleAmazonBookFinder(val ima: ActorRef)(implicit system: ActorSystem) extends BookFinder {
+  def scraperProvider(query: String) = GoogleScraper(query)
+}
+
 object AmazonBookFinder {
-  def props(implicit system: ActorSystem) = Props(new AmazonBookFinder)
+  def props(ima: ActorRef)(implicit system: ActorSystem) = Props(new AmazonBookFinder(ima))
+}
+
+object GoogleAmazonBookFinder {
+  def props(ima: ActorRef)(implicit system: ActorSystem) = Props(new GoogleAmazonBookFinder(ima))
 }

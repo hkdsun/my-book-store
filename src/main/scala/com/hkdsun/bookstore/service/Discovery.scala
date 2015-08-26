@@ -10,8 +10,9 @@ import scala.util.{ Failure, Success }
 
 case class StartDiscovery()
 case class DiscoverBook(file: EbookFile)
-case class DiscoveryResult(result: Future[Option[Book]])
-case class DiscoveryQuery(title: Option[String], authors: Option[List[String]], isbn: Option[String], path: String)
+case class DiscoveryResult(result: Option[Book])
+case class DiscoveryRequest(queryString: Option[String], path: String)
+case class DiscoveryFailed(request: DiscoveryRequest, cause: Throwable)
 
 /*
  * This actor is in charge of starting the discovery hierarchy
@@ -51,7 +52,7 @@ class DiscoveryManagerActor extends Actor with LazyLogging {
     case discoverMessage @ DiscoverBook(file) ⇒
       countByPath(file.abspath.toString).onSuccess {
         case i: Int if i > 0 ⇒
-          logger.info(s"Skipping file ${file.abspath.toString} since it's already discovered")
+        //logger.info(s"Skipping file ${file.abspath.toString} since it's already discovered")
         case i: Int ⇒
           manager ! discoverMessage
       }
@@ -72,21 +73,41 @@ object DiscoveryManagerActor {
  */
 class IdentifierManagerActor extends Actor with Stash with Configuration with LazyLogging {
   import scala.collection.mutable.Set
+  import scala.collection.mutable.Map
   import BookDalProduction._
 
   val workers: Set[ActorRef] = Set.empty
+  val requests: Map[DiscoveryRequest, Int] = Map.empty
 
   def receive = {
     case DiscoverBook(file: EbookFile) ⇒
-      val worker = context.actorOf(AmazonBookFinder.props(context.system))
-      context.watch(worker)
-      workers += worker
-      worker ! DiscoveryQuery(Some(file.filename), None, None, file.abspath.toString)
-    case DiscoveryResult(f: Future[Option[Book]]) ⇒
-      f.onSuccess {
-        case Some(book) ⇒
-          upsert(book)
+      val worker = context.actorOf(AmazonBookFinder.props(self)(context.system))
+      val query = Some(file.filename)
+      val request = DiscoveryRequest(query, file.abspath.toString)
+      val count = requests.getOrElseUpdate(request, 0)
+      if (count < retryLimit) {
+        requests += request -> (count + 1)
+        context.watch(worker)
+        workers += worker
+        worker ! request
+      } else {
+        self ! DiscoveryFailed(request, ScrapingRetryLimitReached(s"Discovery retry limit reached for query: $query"))
       }
+    case request @ DiscoveryRequest(query, path) ⇒
+      val count = requests.getOrElseUpdate(request, 0)
+      requests += request -> (count + 1)
+      if (count < retryLimit) {
+        val worker = context.actorOf(GoogleAmazonBookFinder.props(self)(context.system))
+        context.watch(worker)
+        workers += worker
+        worker ! request
+      } else {
+        self ! DiscoveryFailed(request, ScrapingRetryLimitReached(s"Discovery retry limit reached for query: $query"))
+      }
+    case DiscoveryResult(f: Option[Book]) ⇒
+      f.map(book ⇒ upsert(book))
+    case DiscoveryFailed(request, e: BookNotFoundException) ⇒
+      self ! request
     case Terminated(a) ⇒
       workers -= a
   }
@@ -95,4 +116,3 @@ class IdentifierManagerActor extends Actor with Stash with Configuration with La
 object IdentifierManagerActor {
   def props: Props = Props(new IdentifierManagerActor)
 }
-

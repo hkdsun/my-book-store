@@ -16,7 +16,7 @@ class AmazonScraperTest extends AkkaTestBase {
     }
     "get the correct author for the Ninth Configuration" in {
       val scraper = AmazonScraper("the ninth configuration")
-      Await.result(scraper.authors, 5 seconds).get should contain("William Peter Blatty")
+      Await.result(scraper.authors, 5 seconds).get should be(List("William Peter Blatty"))
     }
     "get the correct description for the Ninth Configuration" in {
       val scraper = AmazonScraper("the ninth configuration")
