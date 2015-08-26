@@ -6,10 +6,9 @@ import org.scalatest.{ WordSpecLike, BeforeAndAfterAll }
 import org.scalatest.Matchers
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import com.hkdsun.bookstore.utils.{ MongoTest, AkkaTestBase }
 
-class AmazonScraperTest extends TestKit(ActorSystem("EventSourceSpec")) with WordSpecLike with Matchers with BeforeAndAfterAll {
-  override def afterAll() = system.shutdown()
-
+class AmazonScraperTest extends AkkaTestBase {
   "AmazonScraper" should {
     "get the correct title for the Ninth Configuration" in {
       val scraper = AmazonScraper("the ninth configuration")

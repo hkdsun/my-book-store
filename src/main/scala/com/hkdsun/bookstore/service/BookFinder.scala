@@ -29,7 +29,7 @@ class AmazonBookFinder(implicit system: ActorSystem) extends BookFinder with Laz
         //TODO implement ISBN
         Some(Book(title = title.get, description = description.get, authors = authors.get, isbn = "Not Implemented", filename = filename))
       } else {
-        logger.warn(s"An incomplete book was ignored - title: $title - author: $authors - description : $description")
+        logger.debug(s"An incomplete book was ignored - filename: $filename - title: $title - author: $authors - description : $description")
         None
       }
     }

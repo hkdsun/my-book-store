@@ -11,6 +11,10 @@ import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.typesafe.scalalogging.LazyLogging
+import net.ruippeixotog.scalascraper.browser.Browser
+import net.ruippeixotog.scalascraper.dsl.DSL._
+import net.ruippeixotog.scalascraper.dsl.DSL.Extract._
+import net.ruippeixotog.scalascraper.dsl.DSL.Parse._
 
 case class CleanUrl(c: HtmlCleaner, u: URL)
 
@@ -44,6 +48,64 @@ abstract class XmlScraper(implicit system: ActorSystem) extends Configuration {
   def description: Future[Option[String]]
   def isbn: Future[Option[String]]
   def queryUrl: URL
+}
+
+class GoogleScraper(query: String)(implicit system: ActorSystem) extends XmlScraper with LazyLogging {
+  import java.util.regex.Pattern
+
+  val browser = new Browser
+  val queryEncoded = "https://encrypted.google.com/search?q=" + URLEncoder.encode(query, "UTF-8")
+  val doc = browser.get(queryEncoded)
+  val els = doc >> elements("a")
+  val listOfUrls = (els >> attrs("href")("a")).toList.filter { a ⇒
+    val matcher = Pattern.compile(".*http://www.amazon.*com.*").matcher(a)
+    matcher.matches()
+  }
+
+  val urls = listOfUrls.map { a ⇒
+    val matcher = Pattern.compile("(.*?)(http://www.amazon.com.*?)(&.*)").matcher(a)
+    val matches = matcher.matches()
+    matcher.group(2)
+  }
+
+  val amazonRoots = urls.map { url ⇒
+    try {
+      Some(browser.get(url))
+    } catch {
+      case e: Throwable ⇒
+        logger.debug(s"Couldn't open Amazon URL: $url - ${e.getMessage}")
+        None
+    }
+  }.flatten
+
+  def title: Future[Option[String]] = Future {
+    amazonRoots.map { root ⇒
+      root >?> text("#productTitle")
+    }.headOption.flatten
+  }
+
+  def authors: Future[Option[List[String]]] = Future {
+    amazonRoots.map { root ⇒
+      val els = root >> elements("span")
+      val spanEls = els >> elements(".author")
+      (spanEls >?> texts("a")).map(_.toList)
+    }.head
+  }
+
+  def description: Future[Option[String]] = Future {
+    amazonRoots.map { root ⇒
+      val els = root >> elements("noscript")
+      els >?> text("div")
+    }.head
+  }
+
+  def isbn: Future[Option[String]] = ???
+
+  def queryUrl = new URL("http://www.google.com")
+}
+
+object GoogleScraper {
+  def apply(query: String)(implicit system: ActorSystem) = new GoogleScraper(query)
 }
 
 class AmazonScraper(query: String)(implicit system: ActorSystem) extends XmlScraper {

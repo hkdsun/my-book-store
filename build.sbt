@@ -23,6 +23,8 @@ libraryDependencies ++= Seq(
   "org.scalatest" % "scalatest_2.11" % "2.2.4"
 )
 
+libraryDependencies += "net.ruippeixotog" %% "scala-scraper" % "0.1.1"
+
 libraryDependencies += "net.sourceforge.htmlcleaner" % "htmlcleaner" % "2.10"
 
 resolvers += "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/"

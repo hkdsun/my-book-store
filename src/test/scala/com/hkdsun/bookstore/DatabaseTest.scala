@@ -20,22 +20,22 @@ class DatabaseTest extends MongoTest with LazyLogging {
 
   "Mongo driver" should {
     "be able to insert a book into the database and query it" in {
-      val book = Book(title = "Test Book", description = "Hello testing", authors = List("Author1"), isbn = "Not implemented")
+      val book = Book(title = "Test Book", description = "Hello testing", authors = List("Author1"), isbn = "Not implemented", filename = "/dev/null")
       insert(book).w
       findByTitle("Test Book").w.get.copy(id = None) should be(book)
     }
 
     "be able to upsert a book into the database and query it" in {
-      val book = Book(title = "Test Book", description = "Hello testing", authors = List("Author1"), isbn = "Not implemented")
-      val book2 = book.copy(description = "changed")
+      val book = Book(title = "Test Book", description = "Hello testing", authors = List("Author1"), isbn = "Not implemented", filename = "/dev/null")
+      val book2 = book.copy(description = "changed", filename = "/dev/null")
       insert(book).w
       upsert(book2).w
       findByTitle("Test Book").w.get.copy(id = None) should be(book2)
     }
 
     "be able to find a book with a single/multiple author" in {
-      val book = Book(title = "Test Book", description = "Hello testing", authors = List("Author1"), isbn = "Not implemented")
-      val book2 = book.copy(title = "Test Book 2", authors = List("Author1", "Author2"))
+      val book = Book(title = "Test Book", description = "Hello testing", authors = List("Author1"), isbn = "Not implemented", filename = "/dev/null")
+      val book2 = book.copy(title = "Test Book 2", authors = List("Author1", "Author2"), filename = "/dev/null")
       upsert(book).w
       upsert(book2).w
       findByAuthors(List("Author1")).w.get.copy(id = None) should be(book)
