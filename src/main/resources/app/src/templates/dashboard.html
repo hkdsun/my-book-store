@@ -43,11 +43,14 @@
 <div class="row">
 	<div class="col-lg-6">
    		<rd-widget>
-   			<rd-widget-header icon="fa-plus" title="Description">
+      <rd-widget-header icon="fa-plus" title="Details">
    			</rd-widget-header>
    			<rd-widget-body>
 				<div class="message">
-          {{selectedBook.description || "Select one of the items above to see the description and download links"}}
+          <p><b>Title:</b> {{selectedBook.title}}</p>
+          <p><b>Author(s):</b> <span ng-repeat="author in selectedBook.authors">{{author}}{{$last ? '' : ', '}}</span></p>
+          <p><b>Description:</b> {{selectedBook.description}}</p>
+          <p><a href="{{selectedBook.filename}}"><b>Download Link</b></a></p>
 				</div>
    			</rd-widget-body>
    		</rd-widget>
